@@ -1,0 +1,10 @@
+[package]
+name = "native_versioning"
+version = "0.1.0"
+authors = ["Sergio Benitez <sb@sergio.bz>"]
+
+[features]
+build = ["cc"]
+
+[dependencies]
+cc = { version = "1.0", optional = true }
