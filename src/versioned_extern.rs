@@ -10,14 +10,14 @@ macro_rules! versioned_extern {
         versioned_extern!([pub fn] $($rest)+);
     );
 
-    (pub static $name:ident : $T:ty; $($rest:tt)+) => (
+    (pub static $name:ident : $T:path; $($rest:tt)*) => (
         versioned_extern!(
             $($rest)*
             ([pub static] $name [: $T;])
         );
     );
 
-    (static $name:ident : $T:ty; $($rest:tt)+) => (
+    (static $name:ident : $T:path; $($rest:tt)*) => (
         versioned_extern!(
             $($rest)*
             ([static] $name [: $T;])
