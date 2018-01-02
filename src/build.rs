@@ -91,7 +91,7 @@ pub fn write_versioned_header<I, H>(
 
     fs::create_dir_all(include_dir)?;
     let mut file = File::create(&versioned_h)?;
-    write!(file, "#define {}(sym) sym ## {}", macro_name, version()?)?;
+    write!(file, "#define {}(sym) sym ## {}\n", macro_name, version()?)?;
 
     Ok(versioned_h)
 }
