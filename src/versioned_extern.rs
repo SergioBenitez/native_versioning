@@ -41,13 +41,7 @@ macro_rules! versioned_extern {
     ($(([$($pre:tt)+] $name:ident [$($post:tt)+]))+) => (
         versioned_extern! {
             $(
-                [concat!(
-                    stringify!($name),
-                    "_v", env!("CARGO_PKG_VERSION_MAJOR"),
-                    "_", env!("CARGO_PKG_VERSION_MINOR"),
-                    "_", env!("CARGO_PKG_VERSION_PATCH"),
-                    "_", env!("CARGO_PKG_VERSION_PRE")
-                )]
+                [concat!(stringify!($name), "_", env!("NATIVE_VERSIONING_VERSION"))]
 
                 [$($pre)+]
 

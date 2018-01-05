@@ -2,8 +2,10 @@ extern crate cc;
 
 use std::env;
 use std::fs::{self, File};
-use std::io::Write;
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
+
+const ENV_NAME: &str = "NATIVE_VERSIONING_VERSION";
 
 /// Error enum.
 #[derive(Debug)]
@@ -31,15 +33,57 @@ impl From<::std::fmt::Error> for Error {
     }
 }
 
-#[macro_export]
-fn version() -> Result<String, Error> {
+fn git_shorthash() -> io::Result<Option<String>> {
+    let git_base = Path::new(".git");
+    if let Err(e) = fs::metadata(git_base) {
+        match e.kind() {
+            io::ErrorKind::NotFound => return Ok(None),
+            _ => return Err(e)
+        }
+    }
+
+    let mut contents = String::new();
+    let mut file = File::open(git_base.join("HEAD"))?;
+    file.read_to_string(&mut contents)?;
+
+    if contents.starts_with("ref: ") {
+        let ref_path = git_base.join(&contents[5..].trim_right());
+        let mut ref_file = File::open(ref_path)?;
+        contents.truncate(0);
+        ref_file.read_to_string(&mut contents)?;
+    }
+
+    if contents.len() < 8 {
+        Err(io::Error::new(io::ErrorKind::InvalidData, "invalid git ref"))
+    } else {
+        Ok(Some(contents[..8].into()))
+    }
+}
+
+fn crate_version() -> Result<String, Error> {
     use std::fmt::Write;
 
     let mut version = String::new();
-    write!(version, "_v{}", env::var("CARGO_PKG_VERSION_MAJOR")?)?;
+    write!(version, "v{}", env::var("CARGO_PKG_VERSION_MAJOR")?)?;
     write!(version, "_{}", env::var("CARGO_PKG_VERSION_MINOR")?)?;
     write!(version, "_{}", env::var("CARGO_PKG_VERSION_PATCH")?)?;
-    write!(version, "_{}", env::var("CARGO_PKG_VERSION_PRE")?)?;
+
+    let pre = env::var("CARGO_PKG_VERSION_PRE")?;
+    if !pre.is_empty() {
+        write!(version, "_{}", pre)?;
+    }
+
+    Ok(version)
+}
+
+fn version() -> Result<String, Error> {
+    use std::fmt::Write;
+
+    let mut version = crate_version()?;
+    if let Some(shorthash) = git_shorthash()? {
+        write!(version, "_{}", shorthash)?;
+    }
+
     Ok(version)
 }
 
@@ -75,23 +119,28 @@ impl HeaderInclude for cc::Build {
     }
 }
 
-/// Generates the versioned header file with the version mangling macro.
+/// Generates the versioned header file with the version mangling CPP macro and
+/// exports an environment variable with the current project's version.
 ///
 /// The header is generated in a file named `header_filename` in the path
-/// `include_dir`. The versioned macro will be named `macro_name`.
+/// `include_dir`. The versioned macro will be named `macro_name`. The
+/// environment variable is exported by printing
+/// `cargo:rustc-env=NATIVE_VERSIONING_VERSION=$value` to `stdout`.
 pub fn write_versioned_header<I, H>(
     include_dir: I,
     header_filename: H,
-    macro_name: &str
+    macro_name: &str,
 ) -> Result<PathBuf, Error>
     where I: AsRef<Path>, H: AsRef<Path>
 {
     let include_dir = include_dir.as_ref();
     let versioned_h = include_dir.join(header_filename.as_ref());
+    let version = version()?;
 
     fs::create_dir_all(include_dir)?;
     let mut file = File::create(&versioned_h)?;
-    write!(file, "#define {}(sym) sym ## {}\n", macro_name, version()?)?;
+    write!(file, "#define {}(sym) sym ## _{}\n", macro_name, version)?;
+    println!("cargo:rustc-env={}={}", ENV_NAME, version);
 
     Ok(versioned_h)
 }

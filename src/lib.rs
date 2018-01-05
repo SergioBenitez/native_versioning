@@ -188,10 +188,11 @@
 //! [`write_versioned_header()`]: fn.write_versioned_header.html
 //! [`versioned_extern!`]: macro.versioned_extern.html
 //!
+
 mod versioned_extern;
 
 #[cfg(feature = "build")]
-mod build;
+mod build_support;
 
 #[cfg(feature = "build")]
-pub use build::*;
+pub use build_support::*;
