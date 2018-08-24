@@ -2,26 +2,20 @@
 /// symbol to the mangled version.
 #[macro_export]
 macro_rules! versioned_extern {
-    (fn $($rest:tt)+) => (
-        versioned_extern!([fn] $($rest)+);
+    ($(#[$($attr:tt)*])* fn $($rest:tt)+) => (
+        versioned_extern!([$(#[$($attr)*])* fn] $($rest)+);
     );
 
-    (pub fn $($rest:tt)+) => (
-        versioned_extern!([pub fn] $($rest)+);
+    ($(#[$($attr:tt)*])* pub fn $($rest:tt)+) => (
+        versioned_extern!([$(#[$($attr)*])* pub fn] $($rest)+);
     );
 
-    (pub static $name:ident : $T:path; $($rest:tt)*) => (
-        versioned_extern!(
-            $($rest)*
-            ([pub static] $name [: $T;])
-        );
+    ($(#[$($attr:tt)*])* static $($rest:tt)+) => (
+        versioned_extern!([$(#[$($attr)*])* static] $($rest)+);
     );
 
-    (static $name:ident : $T:path; $($rest:tt)*) => (
-        versioned_extern!(
-            $($rest)*
-            ([static] $name [: $T;])
-        );
+    ($(#[$($attr:tt)*])* pub static $($rest:tt)+) => (
+        versioned_extern!([$(#[$($attr)*])* pub static] $($rest)+);
     );
 
     ([$($pre:tt)+] $name:ident ($($args:tt)*); $($rest:tt)*) => (
@@ -35,6 +29,13 @@ macro_rules! versioned_extern {
         versioned_extern!(
             $($rest)*
             ([$($pre)+] $name [($($args)*) -> $T;])
+        );
+    );
+
+    ([$($pre:tt)+] $name:ident : $T:path; $($rest:tt)*) => (
+        versioned_extern!(
+            $($rest)*
+            ([$($pre)+] $name [: $T;])
         );
     );
 
@@ -58,8 +59,6 @@ macro_rules! versioned_extern {
             $($pre)+ $name $($post)+
         )+}
     );
-
-    () => ();
 
     ($($rest:tt)*) => ($($rest)*);
 }
